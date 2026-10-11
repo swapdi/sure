@@ -38,12 +38,9 @@
   <% if series.any? %>
     <div class="flex flex-wrap items-center gap-3 px-4 mt-3">
       <% if lines.size > 1 %>
-        <%= render DS::SegmentedControl.new(aria_label: t(".scope_aria"), class: "overflow-x-auto no-scrollbar max-w-full") do |sc| %>
-          <% lines.each do |line| %>
-            <% sc.with_segment(line.name.presence || t(".net_worth"),
-                 data: { action: "multi-series-chart#selectLine", multi_series_chart_line_param: line.key, multi_series_chart_target: "lineButton" }) %>
-          <% end %>
-        <% end %>
+        <%= render "pages/dashboard/series_picker",
+              aria_label: t(".scope_aria"),
+              options: lines.map { |line| { key: line.key, label: line.name.presence || t(".net_worth"), color: line.color, section: line.section } } %>
       <% end %>
 
       <%= render DS::SegmentedControl.new(aria_label: t(".metric_aria")) do |sc| %>

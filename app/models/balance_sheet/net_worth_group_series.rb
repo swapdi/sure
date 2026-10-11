@@ -2,7 +2,8 @@
 # (Cash, Investments, Property, Loans, ...) for the dashboard net worth chart.
 # Liability groups are shown as positive amounts owed, like on the balance sheet.
 class BalanceSheet::NetWorthGroupSeries
-  Line = Data.define(:key, :name, :color, :series)
+  # section: classification name ("Assets" / "Liabilities"), nil for the total
+  Line = Data.define(:key, :name, :color, :section, :series)
 
   def initialize(balance_sheet, period:)
     @balance_sheet = balance_sheet
@@ -11,7 +12,8 @@ class BalanceSheet::NetWorthGroupSeries
 
   def lines
     @lines ||= begin
-      total = Line.new(key: "all", name: nil, color: nil, series: balance_sheet.net_worth_series(period: period))
+      total = Line.new(key: "all", name: nil, color: nil, section: nil, series: balance_sheet.net_worth_series(period: period))
+      sections = balance_sheet.classification_groups.to_h { |group| [ group.classification, group.name ] }
 
       groups = balance_sheet.account_groups.filter_map do |group|
         account_ids = group.accounts.map(&:id)
@@ -25,7 +27,7 @@ class BalanceSheet::NetWorthGroupSeries
         ).balance_series
         next if series.values.size < 2
 
-        Line.new(key: group.key, name: group.name, color: group.color, series: series)
+        Line.new(key: group.key, name: group.name, color: group.color, section: sections[group.classification], series: series)
       end
 
       [ total, *groups ]

@@ -21,6 +21,8 @@ export default class extends Controller {
     "chart",
     "metricButton",
     "lineButton",
+    "lineLabel",
+    "lineSwatch",
     "backgroundToggle",
     "summary",
     "summaryChange",
@@ -188,11 +190,21 @@ export default class extends Controller {
       button.setAttribute("aria-pressed", String(active));
     }
 
+    // Line picker: dropdown options with a check mark on the active line.
     for (const button of this.lineButtonTargets) {
       const active =
         button.dataset.multiSeriesChartLineParam === this._activeLine?.key;
-      button.classList.toggle("segmented-control__segment--active", active);
-      button.setAttribute("aria-pressed", String(active));
+      button.setAttribute("aria-current", String(active));
+      button.querySelector("[data-check]")?.classList.toggle("invisible", !active);
+    }
+
+    const line = this._activeLine;
+    if (line && this.hasLineLabelTarget) {
+      this.lineLabelTarget.textContent = line.name || this.allLabelValue;
+    }
+    if (line && this.hasLineSwatchTarget) {
+      this.lineSwatchTarget.style.background =
+        line.color || "var(--color-gray-400)";
     }
 
     if (this.hasBackgroundToggleTarget) {

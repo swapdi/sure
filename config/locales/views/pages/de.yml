@@ -74,6 +74,7 @@ de:
         metric_gain: "Gewinn"
         metric_value: "Wert"
         all_accounts: "Alle Konten"
+        accounts_section: "Einzelne Konten"
         show_other_lines: "Andere Linien zeigen"
         scope_aria: "Anlagekonto"
         metric_aria: "Kennzahl im Chart"

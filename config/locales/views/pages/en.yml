@@ -129,6 +129,7 @@ en:
         metric_gain: "Gain"
         metric_value: "Value"
         all_accounts: "All accounts"
+        accounts_section: "Single accounts"
         show_other_lines: "Show other lines"
         scope_aria: "Investment account"
         metric_aria: "Chart metric"

@@ -61,12 +61,9 @@
 
     <div class="flex flex-wrap items-center gap-3 px-4">
       <% if lines.size > 2 %>
-        <%= render DS::SegmentedControl.new(aria_label: t(".scope_aria"), class: "overflow-x-auto no-scrollbar max-w-full") do |sc| %>
-          <% lines.each do |line| %>
-            <% sc.with_segment(line.name.presence || t(".all_accounts"),
-                 data: { action: "multi-series-chart#selectLine", multi_series_chart_line_param: line.key, multi_series_chart_target: "lineButton" }) %>
-          <% end %>
-        <% end %>
+        <%= render "pages/dashboard/series_picker",
+              aria_label: t(".scope_aria"),
+              options: lines.map { |line| { key: line.key, label: line.name.presence || t(".all_accounts"), color: (line.color unless line.key == "all"), section: (t(".accounts_section") unless line.key == "all") } } %>
       <% end %>
 
       <%= render DS::SegmentedControl.new(aria_label: t(".metric_aria")) do |sc| %>
