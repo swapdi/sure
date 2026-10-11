@@ -23,6 +23,7 @@ export default class extends Controller {
     "lineButton",
     "lineLabel",
     "lineSwatch",
+    "visibilityToggle",
     "backgroundToggle",
     "summary",
     "summaryChange",
@@ -43,6 +44,8 @@ export default class extends Controller {
 
   _tooltip = null;
   _resizeObserver = null;
+  // Lines the user switched off as background lines (keys).
+  _hiddenLines = new Set();
 
   connect() {
     if (!this.lineValue) this.lineValue = this._lines[0]?.key || "";
@@ -77,6 +80,18 @@ export default class extends Controller {
 
   toggleBackground(event) {
     this.backgroundValue = event.target.checked;
+    this._refresh();
+  }
+
+  // Show or hide one background line; the picker stays open for more toggles.
+  toggleLine(event) {
+    event.stopPropagation();
+    const key = event.params.line;
+    if (this._hiddenLines.has(key)) {
+      this._hiddenLines.delete(key);
+    } else {
+      this._hiddenLines.add(key);
+    }
     this._refresh();
   }
 
@@ -215,6 +230,24 @@ export default class extends Controller {
       this.backgroundToggleTarget.checked = this.backgroundValue;
     }
 
+    // Eye toggles only exist while background lines are on. The active line
+    // is always drawn, so its toggle is disabled and shows as visible.
+    for (const toggle of this.visibilityToggleTargets) {
+      const key = toggle.dataset.multiSeriesChartLineParam;
+      const isActive = key === this._activeLine?.key;
+      const visible = isActive || !this._hiddenLines.has(key);
+
+      toggle.hidden = !this.backgroundValue;
+      toggle.disabled = isActive;
+      toggle.setAttribute("aria-pressed", String(visible));
+      toggle.querySelector("[data-eye-on]").hidden = !visible;
+      toggle.querySelector("[data-eye-off]").hidden = visible;
+      toggle
+        .closest("[data-line-row]")
+        ?.querySelector("[data-line-name]")
+        ?.classList.toggle("opacity-50", this.backgroundValue && !visible);
+    }
+
     // Elements tied to one series (e.g. a holdings table per account) are only
     // shown while that series is active.
     for (const el of this.linkedTargets) {
@@ -275,7 +308,12 @@ export default class extends Controller {
 
     const lines = this._lines;
     const background = this.backgroundValue
-      ? lines.filter((l) => l.key !== active.key && l.points.length > 1)
+      ? lines.filter(
+          (l) =>
+            l.key !== active.key &&
+            !this._hiddenLines.has(l.key) &&
+            l.points.length > 1,
+        )
       : [];
     const activeValues = this._valuesFor(active);
     const backgroundSeries = background.map((line) => ({

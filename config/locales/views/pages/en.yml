@@ -122,6 +122,8 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      series_picker:
+        toggle_line: "Show or hide %{name} in the background"
       investment_summary:
         title: "Investments"
         total_return: "Total Return"

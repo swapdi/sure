@@ -67,6 +67,8 @@ de:
         categories: "Kategorien"
         value: "Wert"
         weight: "Gewicht"
+      series_picker:
+        toggle_line: "%{name} im Hintergrund ein-/ausblenden"
       investment_summary:
         title: Investments
         total_return: "Gesamtrendite"

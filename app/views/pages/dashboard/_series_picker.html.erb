@@ -1,6 +1,8 @@
 <%# locals: (options:, aria_label:) %>
 <%# Dropdown to pick the active line of a multi-series chart. Scales to many
-    lines where a tab row would overflow. options: [{ key:, label:, color:, section: }] %>
+    lines where a tab row would overflow. While background lines are on, each
+    row also gets an eye toggle to show or hide that line behind the active one.
+    options: [{ key:, label:, color:, section: }] %>
 <% first = options.first %>
 <%= render DS::Popover.new(variant: :button, placement: "bottom-start", offset: 8, max_width: "20rem") do |popover| %>
   <% popover.with_button(
@@ -14,21 +16,34 @@
   <% end %>
 
   <% popover.with_custom_content do %>
-    <div class="px-1 max-h-80 overflow-y-auto">
+    <div class="px-1 max-h-[min(28rem,60vh)] overflow-y-auto">
       <% options.group_by { |o| o[:section] }.each do |section, section_options| %>
         <% if section.present? %>
           <p class="px-2 pt-2 pb-1 text-xs font-medium uppercase text-secondary"><%= section %></p>
         <% end %>
         <% section_options.each do |option| %>
-          <button type="button"
-                  class="flex items-center gap-2 p-2 rounded-md w-full text-left focus-ring hover:bg-container-hover"
-                  data-multi-series-chart-target="lineButton"
-                  data-multi-series-chart-line-param="<%= option[:key] %>"
-                  data-action="multi-series-chart#selectLine DS--popover#close">
-            <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: <%= option[:color] || "var(--color-gray-400)" %>"></span>
-            <span class="flex-1 truncate text-sm text-primary"><%= option[:label] %></span>
-            <span class="shrink-0 invisible" data-check><%= icon("check", size: "sm") %></span>
-          </button>
+          <div class="flex items-center gap-1 rounded-md hover:bg-container-hover" data-line-row="<%= option[:key] %>">
+            <button type="button"
+                    class="flex-1 min-w-0 flex items-center gap-2 p-2 rounded-md text-left focus-ring"
+                    data-multi-series-chart-target="lineButton"
+                    data-multi-series-chart-line-param="<%= option[:key] %>"
+                    data-action="multi-series-chart#selectLine DS--popover#close">
+              <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: <%= option[:color] || "var(--color-gray-400)" %>"></span>
+              <span class="flex-1 truncate text-sm text-primary" data-line-name><%= option[:label] %></span>
+              <span class="shrink-0 invisible" data-check><%= icon("check", size: "sm") %></span>
+            </button>
+            <button type="button"
+                    class="shrink-0 p-2 rounded-md text-secondary hover:text-primary focus-ring disabled:opacity-40 disabled:cursor-default"
+                    hidden
+                    title="<%= t("pages.dashboard.series_picker.toggle_line", name: option[:label]) %>"
+                    aria-label="<%= t("pages.dashboard.series_picker.toggle_line", name: option[:label]) %>"
+                    data-multi-series-chart-target="visibilityToggle"
+                    data-multi-series-chart-line-param="<%= option[:key] %>"
+                    data-action="multi-series-chart#toggleLine">
+              <span data-eye-on><%= icon("eye", size: "sm") %></span>
+              <span data-eye-off hidden><%= icon("eye-off", size: "sm") %></span>
+            </button>
+          </div>
         <% end %>
       <% end %>
     </div>
