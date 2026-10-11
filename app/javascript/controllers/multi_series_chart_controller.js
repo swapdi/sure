@@ -195,7 +195,9 @@ export default class extends Controller {
       const active =
         button.dataset.multiSeriesChartLineParam === this._activeLine?.key;
       button.setAttribute("aria-current", String(active));
-      button.querySelector("[data-check]")?.classList.toggle("invisible", !active);
+      button
+        .querySelector("[data-check]")
+        ?.classList.toggle("invisible", !active);
     }
 
     const line = this._activeLine;
