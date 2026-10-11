@@ -123,8 +123,10 @@ export default class extends Controller {
     return line.points.map((p, i) => {
       let value = raw[i];
       if (metric.transform === "delta") value = raw[i] - first;
+      // Relative to the absolute start value, so a negative start (e.g. net
+      // worth below zero) still reads as a gain when the line goes up.
       if (metric.transform === "relative")
-        value = first ? raw[i] / first - 1 : 0;
+        value = first ? (raw[i] - first) / Math.abs(first) : 0;
       return { date: p.date, value };
     });
   }
