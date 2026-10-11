@@ -1,0 +1,11 @@
+# Overrides for running the devcontainer stack on the devvm (shared host):
+#   docker compose -p sure-dev -f .devcontainer/docker-compose.yml -f .devcontainer/compose.devvm.yml up -d app db redis
+# App on 127.0.0.1:3200, no other host ports.
+services:
+  app:
+    ports: !override
+      - "127.0.0.1:3200:3000"
+  db:
+    ports: !reset []
+  selenium:
+    ports: !reset []
