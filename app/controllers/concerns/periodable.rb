@@ -7,7 +7,8 @@ module Periodable
 
   private
     def set_period
-      if params[:start_date].present? && params[:end_date].present?
+      # A range scoped to one dashboard section (?section=) leaves the page period alone.
+      if params[:start_date].present? && params[:end_date].present? && params[:section].blank?
         @period = custom_period_from_params
         return
       end

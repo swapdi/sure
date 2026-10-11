@@ -40,6 +40,7 @@ export default class extends Controller {
     allLabel: { type: String, default: "All" },
     locale: String,
     selectable: { type: Boolean, default: false },
+    section: String,
   };
 
   _tooltip = null;
@@ -635,9 +636,15 @@ export default class extends Controller {
 
         const format = d3.timeFormat("%Y-%m-%d");
         const url = new URL(window.location.href);
-        url.searchParams.delete("period");
         url.searchParams.set("start_date", format(start.date));
         url.searchParams.set("end_date", format(end.date));
+        // Scope the range to this dashboard section; without a section it
+        // replaces the page-wide period as before.
+        if (this.sectionValue) {
+          url.searchParams.set("section", this.sectionValue);
+        } else {
+          url.searchParams.delete("period");
+        }
         Turbo.visit(url.toString());
       });
 

@@ -67,6 +67,11 @@ de:
         categories: "Kategorien"
         value: "Wert"
         weight: "Gewicht"
+      section_period:
+        follow_dashboard: "Wie Dashboard (%{period})"
+        follows: "Folgt dem Dashboard-Zeitraum (%{period})"
+        own: "Eigener Zeitraum: %{period}"
+        aria: "Zeitraum für %{section}: %{period}"
       series_picker:
         toggle_line: "%{name} im Hintergrund ein-/ausblenden"
       investment_summary:

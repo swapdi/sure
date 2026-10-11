@@ -14,6 +14,49 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     assert_response :ok
   end
 
+  test "a section period is saved per user and leaves the dashboard period alone" do
+    @user.update!(default_period: "last_30_days")
+
+    get root_path(section_period: { net_worth_chart: "last_90_days" })
+
+    assert_response :ok
+    assert_equal "last_90_days", @user.reload.preferences.dig("dashboard_section_periods", "net_worth_chart")
+    assert_equal "last_30_days", @user.default_period
+  end
+
+  test "a section period of default follows the dashboard again" do
+    @user.update_dashboard_preferences("dashboard_section_periods" => { "net_worth_chart" => "last_90_days" })
+
+    get root_path(section_period: { net_worth_chart: "default" })
+
+    assert_response :ok
+    assert_nil @user.reload.preferences.dig("dashboard_section_periods", "net_worth_chart")
+  end
+
+  test "section period links are never prefetched, since following one saves a preference" do
+    get root_path
+
+    assert_select "section[data-section-key='net_worth_chart'] a[href*='section_period']"
+    assert_select "section[data-section-key] a[href*='section_period']:not([data-turbo-prefetch='false'])", count: 0
+  end
+
+  test "unknown sections and periods are not saved as section periods" do
+    get root_path(section_period: { balance_sheet: "last_90_days", net_worth_chart: "not_a_period" })
+
+    assert_response :ok
+    assert_nil @user.reload.preferences&.dig("dashboard_section_periods")
+  end
+
+  test "a drag-selected range applies only to its section" do
+    range = Period.custom(start_date: Date.new(2026, 1, 1), end_date: Date.new(2026, 2, 1)).label_range
+
+    get root_path(section: "cashflow_sankey", start_date: "2026-01-01", end_date: "2026-02-01")
+
+    assert_response :ok
+    assert_select "section[data-section-key='cashflow_sankey'] button[aria-label*=?]", range
+    assert_select "section[data-section-key='net_worth_chart'] button[aria-label*=?]", range, count: 0
+  end
+
   test "dashboard renders the net worth chart as drag-selectable, opting it out of card drag-and-drop" do
     get root_path
 

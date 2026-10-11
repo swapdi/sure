@@ -1,0 +1,55 @@
+<%# locals: (section_key:, section_title:, period:, overridden:, dashboard_period:) %>
+<%# Per-section period. "Like dashboard" follows the page-wide picker; a preset
+    is saved per user and survives reloads; a drag-selected range is transient. %>
+<%
+  href = ->(value) { root_path(section_period: { section_key => value }) }
+  custom = overridden && period.key.blank?
+  label = custom ? period.label_range : period.label_short
+%>
+<div data-controller="stop-keydown" data-action="keydown->stop-keydown#stop">
+  <%= render DS::Menu.new(variant: :button, placement: "bottom-start", offset: 6, max_height: "min(24rem, 60vh)") do |menu| %>
+    <% menu.with_button(
+         type: "button",
+         class: class_names(
+           "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium cursor-pointer focus-ring hover:bg-container-inset-hover",
+           overridden ? "bg-container-inset text-primary" : "text-secondary"
+         ),
+         title: overridden ? t("pages.dashboard.section_period.own", period: label) : t("pages.dashboard.section_period.follows", period: dashboard_period.label_short),
+         aria: { label: t("pages.dashboard.section_period.aria", section: section_title, period: label) }
+       ) do %>
+      <%= icon(overridden ? "calendar-clock" : "calendar", size: "xs") %>
+      <span class="whitespace-nowrap"><%= label %></span>
+      <%= icon("chevron-down", size: "xs") %>
+    <% end %>
+
+    <% menu.with_item(
+         variant: :link,
+         text: t("pages.dashboard.section_period.follow_dashboard", period: dashboard_period.label_short),
+         href: href.call("default"),
+         frame: "dashboard_sections",
+         selected: !overridden,
+         data: { turbo_action: "advance", turbo_prefetch: false }
+       ) %>
+    <% menu.with_item(variant: :divider) %>
+    <% Period.all.each do |preset| %>
+      <% menu.with_item(
+           variant: :link,
+           text: preset.label_short,
+           href: href.call(preset.key),
+           frame: "dashboard_sections",
+           selected: overridden && !custom && period.key == preset.key,
+           data: { turbo_action: "advance", turbo_prefetch: false }
+         ) %>
+    <% end %>
+    <% if custom %>
+      <% menu.with_item(
+           variant: :link,
+           text: period.label_range,
+           href: root_path(section: section_key, start_date: period.start_date, end_date: period.end_date),
+           frame: "dashboard_sections",
+           selected: true,
+           data: { turbo_action: "replace", turbo_prefetch: false }
+         ) %>
+    <% end %>
+  <% end %>
+</div>

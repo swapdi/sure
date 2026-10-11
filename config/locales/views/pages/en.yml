@@ -122,6 +122,11 @@ en:
         categories: "Categories"
         value: "Value"
         weight: "Weight"
+      section_period:
+        follow_dashboard: "Like dashboard (%{period})"
+        follows: "Follows the dashboard period (%{period})"
+        own: "Own period: %{period}"
+        aria: "Period for %{section}: %{period}"
       series_picker:
         toggle_line: "Show or hide %{name} in the background"
       investment_summary:

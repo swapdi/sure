@@ -76,6 +76,14 @@
             <h2 class="text-base font-medium">
               <%= t(section[:title]) %>
             </h2>
+            <% if section[:period] %>
+              <%= render "pages/dashboard/section_period_picker",
+                    section_key: section[:key],
+                    section_title: t(section[:title]),
+                    period: section[:period],
+                    overridden: section_period_overridden?(section[:key]),
+                    dashboard_period: @period %>
+            <% end %>
           </div>
           <div class="flex items-center gap-1">
             <%# Expand/Collapse-all for the balance sheet, as the leftmost

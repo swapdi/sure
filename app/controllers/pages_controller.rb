@@ -22,6 +22,9 @@ class PagesController < ApplicationController
     "balance_sheet"      => { col_span: "single", grow: false, min_height: 0, width_toggle: true }
   }.freeze
 
+  # Sections that read the dashboard period and can set their own instead.
+  DASHBOARD_PERIOD_SECTIONS = %w[cashflow_sankey outflows_donut investment_summary net_worth_chart].freeze
+
   # Number of consecutive months (ending at the selected month) shown as
   # bars in the "money_flow" dashboard widget.
   MONEY_FLOW_CHART_MONTHS = 6
@@ -44,14 +47,20 @@ class PagesController < ApplicationController
 
     family_currency = Current.family.currency
 
+    save_section_period_param
+
     # Use IncomeStatement for all cashflow data (now includes categorized trades)
     income_statement = Current.family.income_statement
-    income_totals = income_statement.income_totals(period: @period)
-    expense_totals = income_statement.expense_totals(period: @period)
-    net_totals = income_statement.net_category_totals(period: @period)
+    sankey_period = section_period("cashflow_sankey")
+    outflows_period = section_period("outflows_donut")
 
-    @cashflow_sankey_data = build_cashflow_sankey_data(net_totals, income_totals, expense_totals, family_currency)
-    @outflows_data = build_outflows_donut_data(net_totals)
+    @cashflow_sankey_data = build_cashflow_sankey_data(
+      income_statement.net_category_totals(period: sankey_period),
+      income_statement.income_totals(period: sankey_period),
+      income_statement.expense_totals(period: sankey_period),
+      family_currency
+    )
+    @outflows_data = build_outflows_donut_data(income_statement.net_category_totals(period: outflows_period))
     # Preview-gated: skip the query outright rather than loading rows the
     # section won't be built from.
     @feed_insights = preview_features_enabled? ? Current.family.insights.visible.ordered.limit(Insight::FEED_LIMIT) : Insight.none
@@ -156,7 +165,8 @@ class PagesController < ApplicationController
           title: "pages.dashboard.cashflow_sankey.title",
           partial: "pages/dashboard/cashflow_sankey",
           layout: section_layout("cashflow_sankey"),
-          locals: { sankey_data: @cashflow_sankey_data, period: @period },
+          locals: { sankey_data: @cashflow_sankey_data, period: section_period("cashflow_sankey") },
+          period: section_period("cashflow_sankey"),
           visible: @accounts.any?,
           collapsible: true
         },
@@ -183,7 +193,8 @@ class PagesController < ApplicationController
           title: "pages.dashboard.outflows_donut.title",
           partial: "pages/dashboard/outflows_donut",
           layout: section_layout("outflows_donut"),
-          locals: { outflows_data: @outflows_data, period: @period },
+          locals: { outflows_data: @outflows_data, period: section_period("outflows_donut") },
+          period: section_period("outflows_donut"),
           visible: @accounts.any? && @outflows_data[:categories].present?,
           collapsible: true
         },
@@ -192,7 +203,8 @@ class PagesController < ApplicationController
           title: "pages.dashboard.investment_summary.title",
           partial: "pages/dashboard/investment_summary",
           layout: section_layout("investment_summary"),
-          locals: { investment_statement: @investment_statement, period: @period },
+          locals: { investment_statement: @investment_statement, period: section_period("investment_summary") },
+          period: section_period("investment_summary"),
           visible: @accounts.any? && @investment_statement.investment_accounts.any?,
           collapsible: true
         },
@@ -201,7 +213,8 @@ class PagesController < ApplicationController
           title: "pages.dashboard.net_worth_chart.title",
           partial: "pages/dashboard/net_worth_chart",
           layout: section_layout("net_worth_chart"),
-          locals: { balance_sheet: @balance_sheet, period: @period },
+          locals: { balance_sheet: @balance_sheet, period: section_period("net_worth_chart") },
+          period: section_period("net_worth_chart"),
           visible: @accounts.any?,
           collapsible: true
         },
@@ -237,6 +250,70 @@ class PagesController < ApplicationController
       end
 
       ordered_sections
+    end
+
+    # Period for one dashboard section. In order of precedence:
+    # 1. a drag-selected range for this section (?section=<key>&start_date&end_date),
+    #    transient like the dashboard's own custom range
+    # 2. the preset the user saved for this section
+    # 3. the dashboard-wide period
+    def section_period(key)
+      @section_periods ||= {}
+      @section_periods[key] ||= begin
+        if params[:section] == key && params[:start_date].present? && params[:end_date].present?
+          section_custom_period || @period
+        elsif (saved = saved_section_period_key(key))
+          period_for_key(saved)
+        else
+          @period
+        end
+      end
+    end
+
+    # True when the section does not simply follow the dashboard period.
+    def section_period_overridden?(key)
+      params[:section] == key || saved_section_period_key(key).present?
+    end
+    helper_method :section_period_overridden?
+
+    def saved_section_period_key(key)
+      saved = Current.user.preferences&.dig("dashboard_section_periods", key)
+      saved if Period.valid_key?(saved.to_s)
+    end
+
+    # ?section_period[<key>]=<period key> saves a section's own period;
+    # "default" makes it follow the dashboard period again.
+    def save_section_period_param
+      requested = params[:section_period]
+      return unless requested.respond_to?(:to_unsafe_h)
+
+      updates = requested.to_unsafe_h.each_with_object({}) do |(key, value), memo|
+        next unless DASHBOARD_PERIOD_SECTIONS.include?(key)
+
+        if value == "default"
+          memo[key] = nil
+        elsif Period.valid_key?(value.to_s)
+          memo[key] = value.to_s
+        end
+      end
+      return if updates.empty?
+
+      Current.user.update_dashboard_preferences("dashboard_section_periods" => updates)
+    end
+
+    def section_custom_period
+      Period.custom(start_date: Date.parse(params[:start_date]), end_date: Date.parse(params[:end_date]))
+    rescue ArgumentError, TypeError, ActiveModel::ValidationError
+      nil
+    end
+
+    # Mirrors Periodable: month presets follow the family's month start day.
+    def period_for_key(key)
+      case key
+      when "current_month" then Period.current_month_for(Current.family)
+      when "last_month" then Period.last_month_for(Current.family)
+      else Period.from_key(key)
+      end
     end
 
     # Resolves a section's layout guardrails, applying the user's height preset

@@ -16,7 +16,8 @@
      data-multi-series-chart-metrics-value="<%= metrics.map { |m| m.except(:label) }.to_json %>"
      data-multi-series-chart-all-label-value="<%= t(".net_worth") %>"
      data-multi-series-chart-locale-value="<%= I18n.locale %>"
-     data-multi-series-chart-selectable-value="true">
+     data-multi-series-chart-selectable-value="true"
+     data-multi-series-chart-section-value="net_worth_chart">
   <div class="flex justify-between gap-4 px-4">
     <div class="space-y-2">
       <% if series.trend.present? %>
