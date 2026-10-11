@@ -56,12 +56,20 @@ en:
       net_worth_chart:
         data_not_available: Data not available for the selected period
         title: Net Worth
+        net_worth: Net worth
+        metric_value: Value
+        metric_delta: Change
+        metric_relative: Change in %
+        show_other_lines: Show other lines
+        scope_aria: Account group
+        metric_aria: Chart metric
       no_account_empty_state:
         new_account: New account
         no_account_subtitle: Since no accounts have been added, there's no data to display. Add your first accounts to start viewing dashboard data.
         no_account_title: No accounts yet
       balance_sheet:
         title: "Balance Sheet"
+        show_in_chart: "Show in net worth chart"
         no_items: "No %{name} yet"
         add_accounts: "Add your %{name} accounts to see a full breakdown"
         no_asset: "No assets yet"
@@ -117,6 +125,19 @@ en:
       investment_summary:
         title: "Investments"
         total_return: "Total Return"
+        metric_performance: "Performance"
+        metric_gain: "Gain"
+        metric_value: "Value"
+        all_accounts: "All accounts"
+        show_other_lines: "Show other lines"
+        scope_aria: "Investment account"
+        metric_aria: "Chart metric"
+        portfolio_value: "Portfolio value"
+        period_change: "Period"
+        price_chart: "Price %{ticker}"
+        no_price_data: "No price history for this period"
+        no_chart_data: "No performance data for this period"
+        no_holdings: "No holdings"
         holding: "Holding"
         weight: "Weight"
         value: "Value"

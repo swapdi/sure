@@ -1,0 +1,15 @@
+<%# locals: (series:, width: 96, height: 32) %>
+<%# Static SVG sparkline: rows are small and numerous, so no JS chart per row. %>
+<%
+  values = series.values.map { |v| v.value.respond_to?(:amount) ? v.value.amount.to_f : v.value.to_f }
+  min, max = values.minmax
+  span = (max - min).nonzero? || 1
+  step = width.fdiv([ values.size - 1, 1 ].max)
+  points = values.each_with_index.map do |value, i|
+    "#{(i * step).round(1)},#{(height - 2 - (value - min) / span * (height - 4)).round(1)}"
+  end.join(" ")
+%>
+<svg viewBox="0 0 <%= width %> <%= height %>" preserveAspectRatio="none" class="w-full h-full overflow-visible" aria-hidden="true">
+  <polyline points="<%= points %>" fill="none" stroke="<%= series.trend&.color || "var(--color-gray-400)" %>"
+            stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+</svg>

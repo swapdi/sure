@@ -18,7 +18,7 @@ class PagesControllerTest < ActionDispatch::IntegrationTest
     get root_path
 
     assert_response :ok
-    assert_select "#netWorthChart[data-time-series-chart-selectable-value='true'][draggable='false']"
+    assert_select "#net-worth-chart[data-multi-series-chart-selectable-value='true'] #netWorthChart[draggable='false']"
   end
 
   test "inactive user's existing session is revoked" do

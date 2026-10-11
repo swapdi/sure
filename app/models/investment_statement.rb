@@ -123,6 +123,36 @@ class InvestmentStatement
     end
   end
 
+  # Allocation limited to one account (weights relative to that account).
+  def allocation_for_account(account)
+    holdings = current_holdings.to_a.select { |h| h.account_id == account.id }
+    rolled_up = holdings_rolled_up_by_security(holdings)
+    holdings_total = rolled_up.sum { |_, value, _| value }
+    return [] if holdings_total.zero?
+
+    total = [ convert_to_family_currency(account.balance, account.currency), holdings_total ].max
+
+    rolled_up.map do |security, value, rows|
+      HoldingAllocation.new(
+        security: security,
+        amount: Money.new(value, family.currency),
+        weight: (value / total * 100).round(2),
+        trend: combined_holding_trend(rows)
+      )
+    end
+  end
+
+  # Daily performance lines (all accounts + one per account) for the period.
+  def performance_series(period:)
+    PerformanceSeries.new(family, accounts: investment_accounts, period: period)
+  end
+
+  # Price series per security over the period, keyed by security id. Securities
+  # with fewer than two prices in the period are left out.
+  def price_series(securities, period:)
+    PriceSeries.new(securities, period: period).by_security_id
+  end
+
   # Unrealized gains across all holdings, summed in family currency
   def unrealized_gains
     current_holdings.sum do |holding|
@@ -332,9 +362,8 @@ class InvestmentStatement
       [ portfolio_value, holdings_total ].max
     end
 
-    def holdings_rolled_up_by_security
-      current_holdings
-        .to_a
+    def holdings_rolled_up_by_security(holdings = current_holdings.to_a)
+      holdings
         .group_by(&:security_id)
         .filter_map do |_security_id, holdings|
           # Filter row by row rather than on the netted total. current_holdings

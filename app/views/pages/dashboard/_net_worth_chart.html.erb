@@ -1,14 +1,34 @@
 <%# locals: (balance_sheet:, period:, **args) %>
 
-<div id="net-worth-chart">
-  <% series = balance_sheet.net_worth_series(period: period) %>
+<%
+  group_series = BalanceSheet::NetWorthGroupSeries.new(balance_sheet, period: period)
+  lines = group_series.lines
+  series = lines.first.series
+  metrics = [
+    { key: "value", field: "value", transform: "none", format: "money", label: t(".metric_value") },
+    { key: "delta", field: "value", transform: "delta", format: "money", label: t(".metric_delta") },
+    { key: "relative", field: "value", transform: "relative", format: "percent", label: t(".metric_relative") }
+  ]
+%>
+<div id="net-worth-chart"
+     data-controller="multi-series-chart"
+     data-multi-series-chart-data-value="<%= group_series.to_json %>"
+     data-multi-series-chart-metrics-value="<%= metrics.map { |m| m.except(:label) }.to_json %>"
+     data-multi-series-chart-all-label-value="<%= t(".net_worth") %>"
+     data-multi-series-chart-locale-value="<%= I18n.locale %>"
+     data-multi-series-chart-selectable-value="true">
   <div class="flex justify-between gap-4 px-4">
     <div class="space-y-2">
       <% if series.trend.present? %>
-        <p class="text-primary -space-x-0.5 text-3xl font-medium privacy-sensitive <%= "animate-pulse" if balance_sheet.syncing? %>">
+        <p class="text-primary -space-x-0.5 text-3xl font-medium privacy-sensitive <%= "animate-pulse" if balance_sheet.syncing? %>"
+           data-multi-series-chart-target="summary">
           <%= series.trend.current.format %>
         </p>
-        <%= render partial: "shared/trend_change", locals: { trend: series.trend, comparison_label: period.comparison_label } %>
+        <p class="text-sm privacy-sensitive" data-multi-series-chart-target="summaryTrend"></p>
+        <p class="text-sm text-secondary">
+          <span data-multi-series-chart-target="summaryChange"><%= t(".net_worth") %></span>
+          &middot; <%= period.comparison_label %>
+        </p>
       <% else %>
         <p class="text-sm text-secondary"><%= t(".data_not_available") %></p>
       <% end %>
@@ -16,18 +36,43 @@
   </div>
 
   <% if series.any? %>
-    <div
-    id="netWorthChart"
-    class="w-full min-h-52 privacy-sensitive"
-    style="height: var(--dash-widget-h, 13rem);"
-    data-controller="time-series-chart"
-    data-time-series-chart-data-value="<%= series.to_json %>"
-    data-time-series-chart-selectable-value="true"
-    draggable="false"></div>
+    <div class="flex flex-wrap items-center gap-3 px-4 mt-3">
+      <% if lines.size > 1 %>
+        <%= render DS::SegmentedControl.new(aria_label: t(".scope_aria"), class: "overflow-x-auto no-scrollbar max-w-full") do |sc| %>
+          <% lines.each do |line| %>
+            <% sc.with_segment(line.name.presence || t(".net_worth"),
+                 data: { action: "multi-series-chart#selectLine", multi_series_chart_line_param: line.key, multi_series_chart_target: "lineButton" }) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%= render DS::SegmentedControl.new(aria_label: t(".metric_aria")) do |sc| %>
+        <% metrics.each do |metric| %>
+          <% sc.with_segment(metric[:label],
+               data: { action: "multi-series-chart#selectMetric", multi_series_chart_metric_param: metric[:key], multi_series_chart_target: "metricButton" }) %>
+        <% end %>
+      <% end %>
+
+      <% if lines.size > 1 %>
+        <label class="flex items-center gap-2 text-sm text-secondary cursor-pointer">
+          <input type="checkbox" class="checkbox checkbox--light"
+                 data-multi-series-chart-target="backgroundToggle"
+                 data-action="multi-series-chart#toggleBackground">
+          <%= t(".show_other_lines") %>
+        </label>
+      <% end %>
+    </div>
+
+    <div class="w-full px-4 mt-2">
+      <div id="netWorthChart"
+           class="relative w-full min-h-52 privacy-sensitive"
+           style="height: var(--dash-widget-h, 13rem);"
+           data-multi-series-chart-target="chart"
+           draggable="false"></div>
+    </div>
   <% else %>
     <div class="w-full h-full flex items-center justify-center">
       <p class="text-secondary text-sm"><%= t(".data_not_available") %></p>
     </div>
   <% end %>
-
 </div>

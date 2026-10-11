@@ -20,12 +20,20 @@ de:
       net_worth_chart:
         data_not_available: Für den ausgewählten Zeitraum sind keine Daten verfügbar.
         title: Nettovermögen
+        net_worth: Nettovermögen
+        metric_value: Wert
+        metric_delta: Veränderung
+        metric_relative: Veränderung in %
+        show_other_lines: Andere Linien zeigen
+        scope_aria: Kontogruppe
+        metric_aria: Kennzahl im Chart
       no_account_empty_state:
         new_account: Neues Konto
         no_account_subtitle: Da noch keine Konten hinzugefügt wurden, gibt es keine Daten anzuzeigen. Füge dein erstes Konto hinzu, um Dashboard-Daten zu sehen.
         no_account_title: Noch keine Konten vorhanden
       balance_sheet:
         title: "Bilanz"
+        show_in_chart: "Im Nettovermögen-Chart zeigen"
         no_items: "Noch keine %{name}"
         add_accounts: "Füge deine %{name}-Konten hinzu, um eine vollständige Übersicht zu erhalten."
         add_asset_accounts: Leg deine Vermögenskonten an, um die volle Aufschlüsselung zu sehen
@@ -62,6 +70,19 @@ de:
       investment_summary:
         title: Investments
         total_return: "Gesamtrendite"
+        metric_performance: "Performance"
+        metric_gain: "Gewinn"
+        metric_value: "Wert"
+        all_accounts: "Alle Konten"
+        show_other_lines: "Andere Linien zeigen"
+        scope_aria: "Anlagekonto"
+        metric_aria: "Kennzahl im Chart"
+        portfolio_value: "Portfoliowert"
+        period_change: "Zeitraum"
+        price_chart: "Kurs %{ticker}"
+        no_price_data: "Keine Kurshistorie für diesen Zeitraum"
+        no_chart_data: "Keine Performancedaten für diesen Zeitraum"
+        no_holdings: "Keine Positionen"
         holding: "Position"
         weight: "Gewicht"
         value: "Wert"

@@ -62,6 +62,17 @@
                     <%= icon("chevron-right", class: "group-open:rotate-90") %>
 
                     <p><%= account_group.name %></p>
+
+                    <button type="button"
+                            class="ml-1 p-1 rounded-md text-secondary hover:text-primary hover:bg-surface-hover"
+                            title="<%= t(".show_in_chart") %>"
+                            aria-label="<%= t(".show_in_chart") %>"
+                            data-controller="chart-select"
+                            data-action="chart-select#select"
+                            data-chart-select-chart-param="net-worth-chart"
+                            data-chart-select-line-param="<%= account_group.key %>">
+                      <%= icon("chart-line", size: "xs") %>
+                    </button>
                   </div>
 
                   <div class="flex items-center justify-between text-right gap-2">

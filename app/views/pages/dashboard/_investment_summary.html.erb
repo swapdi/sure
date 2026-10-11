@@ -1,83 +1,186 @@
 <%# locals: (investment_statement:, period:, **args) %>
 
 <% if investment_statement.investment_accounts.any? %>
-  <div id="investment-summary" class="space-y-4">
-    <div class="flex justify-between gap-4 px-4">
-      <div class="space-y-2">
-        <div class="flex items-center gap-2">
-          <h2 class="text-lg font-medium"><%= t(".title") %></h2>
-        </div>
-
-        <p class="text-primary text-3xl font-medium privacy-sensitive">
-          <%= format_money(investment_statement.portfolio_value_money) %>
+  <%
+    performance = investment_statement.performance_series(period: period)
+    lines = performance.lines
+    holdings_by_line = { "all" => investment_statement.allocation }
+    investment_statement.investment_accounts.each do |account|
+      holdings_by_line[account.id] = investment_statement.allocation_for_account(account)
+    end
+    prices = investment_statement.price_series(holdings_by_line.values.flatten.map(&:security), period: period)
+    metrics = [
+      { key: "performance", field: "performance", transform: "none", format: "percent", label: t(".metric_performance") },
+      { key: "gain", field: "gain", transform: "none", format: "money", label: t(".metric_gain") },
+      { key: "value", field: "value", transform: "none", format: "money", label: t(".metric_value") }
+    ]
+  %>
+  <div id="investment-summary"
+       class="space-y-4"
+       data-controller="multi-series-chart"
+       data-multi-series-chart-data-value="<%= performance.to_json %>"
+       data-multi-series-chart-metrics-value="<%= metrics.map { |m| m.except(:label) }.to_json %>"
+       data-multi-series-chart-all-label-value="<%= t(".all_accounts") %>"
+       data-multi-series-chart-locale-value="<%= I18n.locale %>">
+    <div class="flex flex-wrap justify-between gap-4 px-4">
+      <div class="space-y-1">
+        <p class="text-primary text-3xl font-medium privacy-sensitive" data-multi-series-chart-target="summary">&nbsp;</p>
+        <p class="text-sm text-secondary">
+          <span data-multi-series-chart-target="summaryChange"></span>
+          &middot; <%= period.label %>
         </p>
-
-        <% trend = investment_statement.unrealized_gains_trend %>
-        <% if trend %>
-          <div class="flex items-center gap-2 text-sm">
-            <span class="text-secondary"><%= t(".total_return") %>:</span>
-            <span class="font-medium privacy-sensitive" style="color: <%= trend.color %>">
-              <%= format_money(Money.new(trend.value, Current.family.currency)) %>
-              (<%= trend.percent_formatted %>)
-            </span>
-          </div>
-        <% end %>
       </div>
+
+      <% holdings_by_line.each do |line_key, holdings| %>
+        <%
+          if line_key == "all"
+            value = investment_statement.portfolio_value_money
+            trend = investment_statement.unrealized_gains_trend
+          else
+            # Holdings only: linked accounts can carry a negative cash leg
+            value = Money.new(holdings.sum { |h| h.amount_money.amount }, Current.family.currency)
+            trends = holdings.filter_map(&:trend)
+            trend = trends.any? ? Trend.new(current: Money.new(trends.sum { |t| t.current.amount }, Current.family.currency),
+                                            previous: Money.new(trends.sum { |t| t.previous.amount }, Current.family.currency)) : nil
+          end
+        %>
+        <div class="text-right space-y-1"
+             data-multi-series-chart-target="linked"
+             data-line="<%= line_key %>"
+             <%= "hidden" unless line_key == lines.first&.key %>>
+          <p class="text-sm text-secondary"><%= t(".portfolio_value") %></p>
+          <p class="text-primary font-medium privacy-sensitive"><%= format_money(value) %></p>
+          <% if trend %>
+            <p class="text-sm privacy-sensitive" style="color: <%= trend.color %>">
+              <%= t(".total_return") %>: <%= format_money(Money.new(trend.value, Current.family.currency)) %> (<%= trend.percent_formatted %>)
+            </p>
+          <% end %>
+        </div>
+      <% end %>
     </div>
 
-    <% holdings = investment_statement.top_holdings(limit: 5) %>
-    <% if holdings.any? %>
-      <div class="bg-container-inset rounded-xl p-1 mx-4 overflow-x-auto">
-        <div class="rounded-lg shadow-border-xs bg-container overflow-hidden">
-        <table class="w-full">
-          <thead class="bg-container-inset">
-            <tr class="uppercase text-xs font-medium text-secondary">
-              <th class="px-4 py-2 text-left font-medium"><%= t(".holding") %></th>
-              <th class="px-4 py-2 text-right font-medium"><%= t(".weight") %></th>
-              <th class="px-4 py-2 text-right font-medium"><%= t(".value") %></th>
-              <th class="px-4 py-2 text-right font-medium"><%= t(".return") %></th>
-            </tr>
-          </thead>
-          <tbody class="font-medium text-sm">
-            <% holdings.each_with_index do |holding, idx| %>
-              <tr class="<%= idx < holdings.size - 1 ? "table-divider" : "" %>">
-                <td class="p-4">
-                  <div class="flex items-center gap-3">
-                    <% if holding.security.logo_url.present? %>
-                      <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full border border-secondary">
-                    <% else %>
-                      <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary">
-                        <%= holding.ticker.to_s.first(2).presence || "—" %>
-                      </div>
-                    <% end %>
-                    <div class="max-w-32">
-                      <p class="font-medium truncate"><%= holding.ticker %></p>
-                      <p class="text-xs text-secondary"><%= truncate(holding.name, length: 20) %></p>
+    <div class="flex flex-wrap items-center gap-3 px-4">
+      <% if lines.size > 2 %>
+        <%= render DS::SegmentedControl.new(aria_label: t(".scope_aria"), class: "overflow-x-auto no-scrollbar max-w-full") do |sc| %>
+          <% lines.each do |line| %>
+            <% sc.with_segment(line.name.presence || t(".all_accounts"),
+                 data: { action: "multi-series-chart#selectLine", multi_series_chart_line_param: line.key, multi_series_chart_target: "lineButton" }) %>
+          <% end %>
+        <% end %>
+      <% end %>
+
+      <%= render DS::SegmentedControl.new(aria_label: t(".metric_aria")) do |sc| %>
+        <% metrics.each do |metric| %>
+          <% sc.with_segment(metric[:label],
+               data: { action: "multi-series-chart#selectMetric", multi_series_chart_metric_param: metric[:key], multi_series_chart_target: "metricButton" }) %>
+        <% end %>
+      <% end %>
+
+      <% if lines.size > 1 %>
+        <label class="flex items-center gap-2 text-sm text-secondary cursor-pointer">
+          <input type="checkbox" class="checkbox checkbox--light"
+                 data-multi-series-chart-target="backgroundToggle"
+                 data-action="multi-series-chart#toggleBackground">
+          <%= t(".show_other_lines") %>
+        </label>
+      <% end %>
+    </div>
+
+    <% if lines.any? %>
+      <div class="w-full px-4">
+        <div id="investment-performance-chart"
+             class="relative w-full h-56"
+             data-multi-series-chart-target="chart"></div>
+      </div>
+    <% else %>
+      <p class="px-4 text-sm text-secondary"><%= t(".no_chart_data") %></p>
+    <% end %>
+
+    <% holdings_by_line.each do |line_key, holdings| %>
+      <div class="bg-container-inset rounded-xl p-1 mx-4"
+           data-multi-series-chart-target="linked"
+           data-line="<%= line_key %>"
+           <%= "hidden" unless line_key == lines.first&.key %>>
+        <div class="px-4 py-2 flex items-center uppercase text-xs font-medium text-secondary gap-2">
+          <div class="flex-1 min-w-0"><%= t(".holding") %></div>
+          <div class="w-24 shrink-0 hidden sm:block"></div>
+          <div class="w-20 shrink-0 text-right"><%= t(".period_change") %></div>
+          <div class="w-14 shrink-0 text-right hidden sm:block"><%= t(".weight") %></div>
+          <div class="w-24 shrink-0 text-right"><%= t(".value") %></div>
+          <div class="w-16 shrink-0 text-right hidden sm:block"><%= t(".return") %></div>
+        </div>
+
+        <div class="rounded-lg shadow-border-xs bg-container font-medium text-sm">
+          <% if holdings.empty? %>
+            <p class="p-4 text-secondary"><%= t(".no_holdings") %></p>
+          <% end %>
+          <% holdings.each_with_index do |holding, idx| %>
+            <% series = prices[holding.security.id] %>
+            <% dom_key = "#{line_key}-#{holding.security.id}" %>
+            <details class="group <%= "table-divider" if idx < holdings.size - 1 %>">
+              <summary class="cursor-pointer list-none px-4 py-3 flex items-center gap-2">
+                <div class="flex-1 min-w-0 flex items-center gap-3">
+                  <% if holding.security.logo_url.present? %>
+                    <img src="<%= holding.security.logo_url %>" alt="<%= holding.ticker %>" class="w-8 h-8 rounded-full border border-secondary shrink-0">
+                  <% else %>
+                    <div class="w-8 h-8 rounded-full bg-container-inset flex items-center justify-center text-xs font-medium text-secondary shrink-0">
+                      <%= holding.ticker.to_s.first(2).presence || "—" %>
                     </div>
+                  <% end %>
+                  <div class="min-w-0">
+                    <p class="font-medium truncate"><%= holding.name %></p>
+                    <p class="text-xs text-secondary truncate"><%= holding.ticker %></p>
                   </div>
-                </td>
+                </div>
 
-                <td class="p-4 text-right text-secondary privacy-sensitive">
-                  <%= number_to_percentage(holding.weight || 0, precision: 1) %>
-                </td>
+                <div class="w-24 h-8 shrink-0 hidden sm:block">
+                  <% if series %>
+                    <%= render "pages/dashboard/price_sparkline", series: series %>
+                  <% end %>
+                </div>
 
-                <td class="p-4 text-right privacy-sensitive">
-                  <%= format_money(holding.amount_money) %>
-                </td>
-
-                <td class="p-4 text-right">
-                  <% if holding.trend %>
-                    <span class="privacy-sensitive" style="color: <%= holding.trend.color %>">
-                      <%= holding.trend.percent_formatted %>
-                    </span>
+                <div class="w-20 shrink-0 text-right">
+                  <% if series&.trend %>
+                    <span class="privacy-sensitive" style="color: <%= series.trend.color %>"><%= series.trend.percent_formatted %></span>
                   <% else %>
                     <span class="text-secondary">-</span>
                   <% end %>
-                </td>
-              </tr>
-            <% end %>
-          </tbody>
-        </table>
+                </div>
+
+                <div class="w-14 shrink-0 text-right text-secondary privacy-sensitive hidden sm:block">
+                  <%= number_to_percentage(holding.weight || 0, precision: 1) %>
+                </div>
+
+                <div class="w-24 shrink-0 text-right privacy-sensitive">
+                  <%= format_money(holding.amount_money) %>
+                </div>
+
+                <div class="w-16 shrink-0 text-right hidden sm:block">
+                  <% if holding.trend %>
+                    <span class="privacy-sensitive" style="color: <%= holding.trend.color %>"><%= holding.trend.percent_formatted %></span>
+                  <% else %>
+                    <span class="text-secondary">-</span>
+                  <% end %>
+                </div>
+              </summary>
+
+              <div class="px-4 pb-4">
+                <% if series %>
+                  <p class="text-xs text-secondary mb-2">
+                    <%= t(".price_chart", ticker: holding.ticker) %>:
+                    <span class="privacy-sensitive"><%= series.first.value.format %></span> &rarr;
+                    <span class="privacy-sensitive"><%= series.values.last.value.format %></span>
+                  </p>
+                  <div id="price-<%= dom_key %>"
+                       class="w-full h-44 privacy-sensitive"
+                       data-controller="time-series-chart"
+                       data-time-series-chart-data-value="<%= series.to_json %>"></div>
+                <% else %>
+                  <p class="text-sm text-secondary"><%= t(".no_price_data") %></p>
+                <% end %>
+              </div>
+            </details>
+          <% end %>
         </div>
       </div>
     <% end %>
